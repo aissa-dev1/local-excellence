@@ -8,13 +8,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { SponsorServiceV1 } from './sponsor.service';
-import { SponsorV1WithId } from './sponsor.types';
 import { CreateSponsorV1Dto } from './sponsor.dto';
 import { Request as RequestType } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { JWTUserV1Type } from '../user/user.types';
 import { StoreServiceV1 } from '../store/store.service';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
+import { SponsorV1 } from './sponsor.schema';
 
 @Controller({ path: 'sponsors', version: '1' })
 export class SponsorControllerV1 {
@@ -25,8 +25,8 @@ export class SponsorControllerV1 {
   ) {}
 
   @Get()
-  getSponsors(): Promise<SponsorV1WithId[]> {
-    return this.sponsorService.findAll();
+  getSponsors(): Promise<SponsorV1[]> {
+    return this.sponsorService.findMany();
   }
 
   @Post()
@@ -38,7 +38,9 @@ export class SponsorControllerV1 {
     const token = req.headers.authorization.split(' ')[1];
     const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
     const userStore = await this.storeService.findOne({
-      ownerId: decodedUser.sub,
+      filter: {
+        ownerId: decodedUser.sub,
+      },
     });
 
     if (!userStore) {

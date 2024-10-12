@@ -11,6 +11,9 @@ export class UserV1 extends Document {
 
   @Prop({ required: true })
   userName: string;
+
+  @Prop({ required: true })
+  joinedAt: number;
 }
 
 export const UserSchemaV1 = SchemaFactory.createForClass(UserV1);

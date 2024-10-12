@@ -8,5 +8,3 @@ export enum StoreV1Type {
 }
 
 export type StoreV1Document = StoreV1 & Document;
-
-export type StoreV1WithId = StoreV1 & { _id: unknown };

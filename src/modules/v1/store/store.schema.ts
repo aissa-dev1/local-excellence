@@ -10,6 +10,9 @@ export class StoreV1 {
 
   @Prop({ required: true })
   type: string;
+
+  @Prop({ required: true })
+  createdAt: number;
 }
 
 export const StoreSchemaV1 = SchemaFactory.createForClass(StoreV1);

@@ -4,14 +4,16 @@ import { Document } from 'mongoose';
 @Schema({ collection: 'sponsors_v1' })
 export class SponsorV1 extends Document {
   @Prop({ required: true })
+  ownerId: string;
+
+  @Prop({ required: true })
   backgroundColor: string;
 
   @Prop({ required: true })
   color: string;
 
-  @Prop({ required: true })
-  ownerId: string;
-
+  // TODO: Remove this field and update the controller
+  // Just keep the ownerId for most cases
   @Prop({ required: true })
   ownerStoreName: string;
 

@@ -20,7 +20,9 @@ export class AuthControllerV1 {
 
   @Post('/sign-up')
   async signUp(@Body() dto: AuthV1SignUpDto): Promise<string> {
-    const user = await this.userService.findOneByEmail(dto.email);
+    const user = await this.userService.findOne({
+      filter: { email: dto.email },
+    });
 
     if (user) {
       throw new UnauthorizedException(
@@ -39,7 +41,9 @@ export class AuthControllerV1 {
 
   @Post('/login')
   async login(@Body() dto: AuthV1LoginDto): Promise<AuthV1LoginResponse> {
-    const user = await this.userService.findOneByEmail(dto.email);
+    const user = await this.userService.findOne({
+      filter: { email: dto.email },
+    });
 
     if (!user) {
       throw new NotFoundException('Invalid credentials');

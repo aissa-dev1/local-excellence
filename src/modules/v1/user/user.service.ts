@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { UserV1 } from './user.schema';
-import { Model, ProjectionType, QueryOptions, RootFilterQuery } from 'mongoose';
+import { Model } from 'mongoose';
 import { CreateUserV1Dto } from './user.dto';
 import { UserV1Document } from './user.types';
+import { DBQueryFindParams } from 'src/modules/shared/types';
 
 @Injectable()
 export class UserServiceV1 {
@@ -12,32 +13,47 @@ export class UserServiceV1 {
   ) {}
 
   async createUser(dto: CreateUserV1Dto): Promise<UserV1Document> {
-    const createdUser = await this.userModel.create(dto);
+    const createdUser = await this.userModel.create({
+      ...dto,
+      joinedAt: Date.now(),
+    });
     await createdUser.save();
     return createdUser;
   }
 
-  findAll(
-    filter?: RootFilterQuery<UserV1>,
-    projection?: ProjectionType<UserV1>,
-    options?: QueryOptions<UserV1> & { lean: true },
-  ): Promise<UserV1Document[]> {
-    return this.userModel.find(filter, projection, options);
+  findMany(params: DBQueryFindParams<UserV1> = {}): Promise<UserV1Document[]> {
+    return this.userModel.find(
+      params.filter,
+      params.projection,
+      params.options,
+    );
   }
 
   findOne(
-    filter?: RootFilterQuery<UserV1>,
-    projection?: ProjectionType<UserV1>,
-    options?: QueryOptions<UserV1> & { lean: true },
+    params: DBQueryFindParams<UserV1> = {},
   ): Promise<UserV1Document | null> {
-    return this.userModel.findOne(filter, projection, options);
+    return this.userModel.findOne(
+      params.filter,
+      params.projection,
+      params.options,
+    );
   }
 
-  findOneByEmail(
-    email: string,
-    projection?: ProjectionType<UserV1>,
-    options?: QueryOptions<UserV1> & { lean: true },
+  findOneWithoutPassword(
+    params: DBQueryFindParams<UserV1> = {},
   ): Promise<UserV1Document | null> {
-    return this.findOne({ email }, projection, options);
+    const projection: { [key: string]: number | boolean } = {
+      password: false,
+    };
+
+    if (params.projection) {
+      Object.assign(projection, params.projection);
+    }
+
+    return this.findOne({
+      filter: params.filter,
+      projection,
+      options: params.options,
+    });
   }
 }

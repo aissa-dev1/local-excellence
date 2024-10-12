@@ -3,7 +3,9 @@ import {
   Body,
   Controller,
   Get,
+  NotFoundException,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -13,51 +15,70 @@ import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { JwtService } from '@nestjs/jwt';
 import { JWTUserV1Type } from '../user/user.types';
 import { Request as RequestType } from 'express';
-import { UserServiceV1 } from '../user/user.service';
-import { StoreV1Document, StoreV1WithId } from './store.types';
+import { decodeStoreName } from 'src/utils/store-name';
+import { StoreV1 } from './store.schema';
 
 @Controller({ path: 'stores', version: '1' })
 export class StoreControllerV1 {
-  private homeStoresSize = 6;
+  private readonly homeStoresSize = 6;
 
   constructor(
     private readonly storeService: StoreServiceV1,
     private readonly jwtService: JwtService,
-    private readonly userService: UserServiceV1,
   ) {}
 
   @Get()
-  getStores(): Promise<StoreV1WithId[]> {
-    return this.storeService.getShuffledStores();
+  async getStores(): Promise<StoreV1[]> {
+    const stores = await this.storeService.findMany();
+    return stores;
+  }
+
+  // TODO: For deletion
+  @Get('/paginated')
+  async getPaginatedStores(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 5,
+  ): Promise<StoreV1[]> {
+    const stores = await this.storeService.getPaginatedStores(page, limit);
+    return stores;
+  }
+
+  @Get('/search')
+  async searchStores(@Query('query') query: string): Promise<StoreV1[]> {
+    const stores = await this.storeService.findMany({
+      filter: {
+        name: { $regex: query, $options: 'i' },
+      },
+    });
+    return stores;
   }
 
   @Get('/size')
   async getStoresSize(): Promise<number> {
-    const stores = await this.storeService.findAll();
+    const stores = await this.storeService.findMany();
     return stores.length;
   }
 
   @Get('/home')
-  async getHomeStores(): Promise<(StoreV1WithId & { ownerName: string })[]> {
-    const stores = await this.storeService.getShuffledStores();
-    const homeStores = new Set<StoreV1Document>();
+  async getHomeStores(): Promise<StoreV1[]> {
+    const stores = await this.storeService.getRandomStores();
+    const homeStores = stores.slice(0, this.homeStoresSize);
+    return homeStores;
+  }
 
-    while (homeStores.size < this.homeStoresSize) {
-      const store = stores[Math.floor(Math.random() * stores.length)];
-      homeStores.add(store);
+  @Get('/name/:name')
+  async getStoreByName(@Request() req: RequestType): Promise<StoreV1> {
+    const foundStore = await this.storeService.findOne({
+      filter: {
+        name: decodeStoreName(req.params.name),
+      },
+    });
+
+    if (!foundStore) {
+      throw new NotFoundException('Store not found');
     }
 
-    const filteredStores = [...homeStores].map(async (store) => {
-      const owner = await this.userService.findOne({ _id: store.ownerId });
-      return {
-        _id: store._id,
-        name: store.name,
-        ownerId: store.ownerId,
-        type: store.type,
-        ownerName: owner.userName,
-      };
-    });
-    return Promise.all(filteredStores);
+    return foundStore;
   }
 
   @Post()
@@ -69,7 +90,9 @@ export class StoreControllerV1 {
     const token = req.headers.authorization.split(' ')[1];
     const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
     const foundStore = await this.storeService.findOne({
-      name: dto.name,
+      filter: {
+        name: dto.name,
+      },
     });
 
     if (foundStore) {
