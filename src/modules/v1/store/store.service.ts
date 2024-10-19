@@ -21,10 +21,10 @@ export class StoreServiceV1 {
 
   async createStore(
     dto: CreateStoreV1Dto,
-    ownerId: string,
+    userId: string,
   ): Promise<StoreV1Document> {
     const createdStore = await this.storeModel.create({
-      ownerId,
+      userId,
       ...dto,
       createdAt: Date.now(),
     });

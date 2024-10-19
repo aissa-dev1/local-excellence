@@ -17,6 +17,8 @@ import { JWTUserV1Type } from '../user/user.types';
 import { Request as RequestType } from 'express';
 import { decodeStoreName } from 'src/utils/store-name';
 import { StoreV1 } from './store.schema';
+import { STORE_V1_TYPE } from './store.constants';
+import { hasSpecialCharacters } from 'src/utils/has-special-characters';
 
 @Controller({ path: 'stores', version: '1' })
 export class StoreControllerV1 {
@@ -28,28 +30,16 @@ export class StoreControllerV1 {
   ) {}
 
   @Get()
-  async getStores(): Promise<StoreV1[]> {
-    const stores = await this.storeService.findMany();
-    return stores;
+  getStores(): Promise<StoreV1[]> {
+    return this.storeService.findMany();
   }
 
-  // TODO: For deletion
   @Get('/paginated')
   async getPaginatedStores(
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 5,
   ): Promise<StoreV1[]> {
     const stores = await this.storeService.getPaginatedStores(page, limit);
-    return stores;
-  }
-
-  @Get('/search')
-  async searchStores(@Query('query') query: string): Promise<StoreV1[]> {
-    const stores = await this.storeService.findMany({
-      filter: {
-        name: { $regex: query, $options: 'i' },
-      },
-    });
     return stores;
   }
 
@@ -66,19 +56,39 @@ export class StoreControllerV1 {
     return homeStores;
   }
 
+  @Get('types')
+  async getStoreTypes(): Promise<string[]> {
+    return Object.values(STORE_V1_TYPE);
+  }
+
   @Get('/name/:name')
   async getStoreByName(@Request() req: RequestType): Promise<StoreV1> {
-    const foundStore = await this.storeService.findOne({
+    const store = await this.storeService.findOne({
       filter: {
         name: decodeStoreName(req.params.name),
       },
     });
 
-    if (!foundStore) {
+    if (!store) {
       throw new NotFoundException('Store not found');
     }
 
-    return foundStore;
+    return store;
+  }
+
+  @Get('/id/:id')
+  async getStoreById(@Request() req: RequestType): Promise<StoreV1> {
+    const store = await this.storeService.findOne({
+      filter: {
+        _id: req.params.id,
+      },
+    });
+
+    if (!store) {
+      throw new NotFoundException('Store not found');
+    }
+
+    return store;
   }
 
   @Post()
@@ -89,14 +99,19 @@ export class StoreControllerV1 {
   ): Promise<string> {
     const token = req.headers.authorization.split(' ')[1];
     const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
-    const foundStore = await this.storeService.findOne({
+    const store = await this.storeService.findOne({
       filter: {
         name: dto.name,
       },
     });
 
-    if (foundStore) {
+    if (store) {
       throw new BadRequestException('Store with this name already exists');
+    }
+    if (hasSpecialCharacters(dto.name)) {
+      throw new BadRequestException(
+        'Store name cannot contain special characters',
+      );
     }
 
     const createdStore = await this.storeService.createStore(
@@ -106,43 +121,56 @@ export class StoreControllerV1 {
     return `Store ${createdStore.name} created successfully`;
   }
 
-  //   @Post('/setup')
-  //   @UseGuards(JwtAuthGuard)
-  //   async setupStores(@Request() req: RequestType) {
-  //     await this.storeService.deleteMany({});
-  //     const token = req.headers.authorization.split(' ')[1];
-  //     const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
-  //     const characters =
-  //       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  //     const types = Object.values(StoreV1Type);
-  //     const foundCharacters = [];
+  @Post('/search')
+  async searchStores(@Query('query') query: string): Promise<StoreV1[]> {
+    const stores = await this.storeService.findMany({
+      filter: {
+        name: { $regex: query, $options: 'i' },
+      },
+    });
+    return stores;
+  }
 
-  //     const randomCharacter = () => {
-  //       const foundChar = characters.charAt(
-  //         Math.floor(Math.random() * characters.length),
-  //       );
+  // TODO: delete this endpoint
+  @Post('/setup')
+  @UseGuards(JwtAuthGuard)
+  async setupStores(@Request() req: RequestType) {
+    await this.storeService.deleteMany();
+    return 'Stores setted up successfully';
+    const token = req.headers.authorization.split(' ')[1];
+    const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
+    const characters =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const types = Object.values(STORE_V1_TYPE);
+    const foundCharacters = [];
 
-  //       if (!foundCharacters.includes(foundChar)) {
-  //         foundCharacters.push(foundChar);
-  //         return foundChar;
-  //       }
+    const randomCharacter = () => {
+      const foundChar = characters.charAt(
+        Math.floor(Math.random() * characters.length),
+      );
 
-  //       return randomCharacter();
-  //     };
-  //     const randomType = () => {
-  //       return types[Math.floor(Math.random() * types.length)];
-  //     };
+      if (!foundCharacters.includes(foundChar)) {
+        foundCharacters.push(foundChar);
+        return foundChar;
+      }
 
-  //     for (let i = 0; i < 20; i++) {
-  //       await this.storeService.createStore(
-  //         {
-  //           name: `${randomCharacter()} Store ${i + 1}`,
-  //           type: randomType(),
-  //         },
-  //         decodedUser.sub,
-  //       );
-  //     }
+      return randomCharacter();
+    };
+    const randomType = () => {
+      return types[Math.floor(Math.random() * types.length)];
+    };
 
-  //     return 'Stores setted up successfully';
-  //   }
+    for (let i = 0; i < 20; i++) {
+      await this.storeService.createStore(
+        {
+          name: `${randomCharacter()} Store ${i + 1}`,
+          description: `This is a store description ${i + 1}`,
+          type: randomType(),
+        },
+        decodedUser.sub,
+      );
+    }
+
+    return 'Stores setted up successfully';
+  }
 }

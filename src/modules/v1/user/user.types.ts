@@ -5,6 +5,7 @@ export interface JWTUserV1Type {
   sub: string;
   email: string;
   userName: string;
+  joinedAt: string;
 }
 
 export type UserV1Document = UserV1 & Document;

@@ -9,19 +9,19 @@ import {
 } from '@nestjs/common';
 import { SponsorServiceV1 } from './sponsor.service';
 import { CreateSponsorV1Dto } from './sponsor.dto';
-import { Request as RequestType } from 'express';
-import { JwtService } from '@nestjs/jwt';
-import { JWTUserV1Type } from '../user/user.types';
 import { StoreServiceV1 } from '../store/store.service';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { SponsorV1 } from './sponsor.schema';
+import { Request as RequestType } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import { JWTUserV1Type } from '../user/user.types';
 
 @Controller({ path: 'sponsors', version: '1' })
 export class SponsorControllerV1 {
   constructor(
     private readonly sponsorService: SponsorServiceV1,
-    private readonly jwtService: JwtService,
     private readonly storeService: StoreServiceV1,
+    private readonly jwtService: JwtService,
   ) {}
 
   @Get()
@@ -37,22 +37,40 @@ export class SponsorControllerV1 {
   ): Promise<string> {
     const token = req.headers.authorization.split(' ')[1];
     const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
-    const userStore = await this.storeService.findOne({
+    const store = await this.storeService.findOne({
       filter: {
-        ownerId: decodedUser.sub,
+        _id: dto.storeId,
+      },
+    });
+    const sponsor = await this.sponsorService.findOne({
+      filter: {
+        storeId: dto.storeId,
       },
     });
 
-    if (!userStore) {
+    if (!store) {
       throw new UnauthorizedException(
-        'You cannot create sponsor without store',
+        'No store found, you cannot create a sponsor without a store',
+      );
+    }
+    if (sponsor) {
+      throw new UnauthorizedException('Sponsor from this store already exists');
+    }
+    if (store.userId !== decodedUser.sub) {
+      throw new UnauthorizedException(
+        'You are not authorized to create a sponsor from this store',
       );
     }
 
-    const createdSponsor = await this.sponsorService.createSponsor(dto, {
-      id: decodedUser.sub,
-      storeName: userStore.name,
-    });
-    return `Sponsor from ${createdSponsor.ownerStoreName} created successfully`;
+    await this.sponsorService.createSponsor(dto, store._id.toString());
+    return `Sponsor from ${store.name} created successfully`;
+  }
+
+  // TODO: delete this endpoint
+  @Post('setup')
+  @UseGuards(JwtAuthGuard)
+  async setupSponsors(): Promise<string> {
+    await this.sponsorService.deleteMany();
+    return 'Sponsors setted up successfully';
   }
 }

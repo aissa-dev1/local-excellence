@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { SponsorV1 } from './sponsor.schema';
 import { Model } from 'mongoose';
-import {
-  CreateSponsorV1OwnerOptions,
-  SponsorV1Document,
-} from './sponsor.types';
+import { SponsorV1Document } from './sponsor.types';
 import { CreateSponsorV1Dto } from './sponsor.dto';
-import { DBQueryFindParams } from 'src/modules/shared/types';
+import {
+  DBQueryDeleteParams,
+  DBQueryFindParams,
+} from 'src/modules/shared/types';
 
 @Injectable()
 export class SponsorServiceV1 {
@@ -18,12 +18,11 @@ export class SponsorServiceV1 {
 
   async createSponsor(
     dto: CreateSponsorV1Dto,
-    ownerOptions: CreateSponsorV1OwnerOptions,
+    storeId: string,
   ): Promise<SponsorV1Document> {
     const createdSponsor = await this.sponsorModel.create({
       ...dto,
-      ownerId: ownerOptions.id,
-      ownerStoreName: ownerOptions.storeName,
+      storeId,
     });
     await createdSponsor.save();
     return createdSponsor;
@@ -47,5 +46,11 @@ export class SponsorServiceV1 {
       params.projection,
       params.options,
     );
+  }
+
+  deleteMany(
+    params: DBQueryDeleteParams<SponsorV1> = {},
+  ): Promise<{ deletedCount?: number }> {
+    return this.sponsorModel.deleteMany(params.filter, params.options);
   }
 }

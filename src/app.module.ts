@@ -8,6 +8,7 @@ import { UserModule } from './modules/shared/user/user.module';
 import { AuthModule } from './modules/shared/auth/auth.module';
 import { StoreModule } from './modules/shared/store/store.module';
 import { SponsorModule } from './modules/shared/sponsor/sponsor.module';
+import { ProductModule } from './modules/shared/product/product.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SponsorModule } from './modules/shared/sponsor/sponsor.module';
     AuthModule,
     UserModule,
     StoreModule,
+    ProductModule,
     SponsorModule,
   ],
   controllers: [AppController],

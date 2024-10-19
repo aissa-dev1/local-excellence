@@ -59,6 +59,7 @@ export class AuthControllerV1 {
       sub: user._id,
       email: user.email,
       userName: user.userName,
+      joinedAt: user.joinedAt,
     });
     return { message: `Welcome ${user.userName}`, accessToken };
   }

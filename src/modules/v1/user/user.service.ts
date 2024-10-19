@@ -4,7 +4,10 @@ import { UserV1 } from './user.schema';
 import { Model } from 'mongoose';
 import { CreateUserV1Dto } from './user.dto';
 import { UserV1Document } from './user.types';
-import { DBQueryFindParams } from 'src/modules/shared/types';
+import {
+  DBQueryDeleteParams,
+  DBQueryFindParams,
+} from 'src/modules/shared/types';
 
 @Injectable()
 export class UserServiceV1 {
@@ -27,6 +30,24 @@ export class UserServiceV1 {
       params.projection,
       params.options,
     );
+  }
+
+  findManyWithoutPassword(
+    params: DBQueryFindParams<UserV1> = {},
+  ): Promise<UserV1Document[]> {
+    const projection: { [key: string]: number | boolean } = {
+      password: false,
+    };
+
+    if (params.projection) {
+      Object.assign(projection, params.projection);
+    }
+
+    return this.findMany({
+      filter: params.filter,
+      projection,
+      options: params.options,
+    });
   }
 
   findOne(
@@ -55,5 +76,11 @@ export class UserServiceV1 {
       projection,
       options: params.options,
     });
+  }
+
+  deleteMany(params: DBQueryDeleteParams<UserV1> = {}): Promise<{
+    deletedCount?: number;
+  }> {
+    return this.userModel.deleteMany(params.filter, params.options);
   }
 }
