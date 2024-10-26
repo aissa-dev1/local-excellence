@@ -97,8 +97,6 @@ export class StoreControllerV1 {
     @Body() dto: CreateStoreV1Dto,
     @Request() req: RequestType,
   ): Promise<string> {
-    const token = req.headers.authorization.split(' ')[1];
-    const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
     const store = await this.storeService.findOne({
       filter: {
         name: dto.name,
@@ -114,9 +112,11 @@ export class StoreControllerV1 {
       );
     }
 
+    console.log(req.user);
+
     const createdStore = await this.storeService.createStore(
       dto,
-      decodedUser.sub,
+      (req.user as JWTUserV1Type).sub,
     );
     return `Store ${createdStore.name} created successfully`;
   }
@@ -137,8 +137,6 @@ export class StoreControllerV1 {
   async setupStores(@Request() req: RequestType) {
     await this.storeService.deleteMany();
     return 'Stores setted up successfully';
-    const token = req.headers.authorization.split(' ')[1];
-    const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
     const characters =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const types = Object.values(STORE_V1_TYPE);
@@ -167,7 +165,7 @@ export class StoreControllerV1 {
           description: `This is a store description ${i + 1}`,
           type: randomType(),
         },
-        decodedUser.sub,
+        (req.user as JWTUserV1Type).sub,
       );
     }
 

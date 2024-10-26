@@ -35,8 +35,6 @@ export class SponsorControllerV1 {
     @Body() dto: CreateSponsorV1Dto,
     @Request() req: RequestType,
   ): Promise<string> {
-    const token = req.headers.authorization.split(' ')[1];
-    const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
     const store = await this.storeService.findOne({
       filter: {
         _id: dto.storeId,
@@ -56,7 +54,7 @@ export class SponsorControllerV1 {
     if (sponsor) {
       throw new UnauthorizedException('Sponsor from this store already exists');
     }
-    if (store.userId !== decodedUser.sub) {
+    if (store.userId !== (req.user as JWTUserV1Type).sub) {
       throw new UnauthorizedException(
         'You are not authorized to create a sponsor from this store',
       );

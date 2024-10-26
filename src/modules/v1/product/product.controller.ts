@@ -91,15 +91,13 @@ export class ProductControllerV1 {
     @Body() dto: CreateProductV1Dto,
     @Request() req: RequestType,
   ): Promise<string> {
-    const token = req.headers.authorization.split(' ')[1];
-    const decodedUser = await this.jwtService.verifyAsync<JWTUserV1Type>(token);
     const store = await this.storeService.findOne({
       filter: {
         _id: dto.storeId,
       },
     });
 
-    if (store.userId !== decodedUser.sub) {
+    if (store.userId !== (req.user as JWTUserV1Type).sub) {
       throw new UnauthorizedException(
         'You are not authorized to create a product from this store',
       );
