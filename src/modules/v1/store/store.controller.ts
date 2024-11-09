@@ -12,7 +12,6 @@ import {
 import { StoreServiceV1 } from './store.service';
 import { CreateStoreV1Dto } from './store.dto';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
-import { JwtService } from '@nestjs/jwt';
 import { JWTUserV1Type } from '../user/user.types';
 import { Request as RequestType } from 'express';
 import { decodeStoreName } from 'src/utils/store-name';
@@ -24,10 +23,7 @@ import { hasSpecialCharacters } from 'src/utils/has-special-characters';
 export class StoreControllerV1 {
   private readonly homeStoresSize = 6;
 
-  constructor(
-    private readonly storeService: StoreServiceV1,
-    private readonly jwtService: JwtService,
-  ) {}
+  constructor(private readonly storeService: StoreServiceV1) {}
 
   @Get()
   getStores(): Promise<StoreV1[]> {
@@ -59,6 +55,15 @@ export class StoreControllerV1 {
   @Get('types')
   async getStoreTypes(): Promise<string[]> {
     return Object.values(STORE_V1_TYPE);
+  }
+
+  @Get('/userId/:userId')
+  async getUserStoresById(@Request() req: RequestType): Promise<StoreV1[]> {
+    return this.storeService.findMany({
+      filter: {
+        userId: req.params.userId,
+      },
+    });
   }
 
   @Get('/name/:name')
@@ -111,8 +116,6 @@ export class StoreControllerV1 {
         'Store name cannot contain special characters',
       );
     }
-
-    console.log(req.user);
 
     const createdStore = await this.storeService.createStore(
       dto,
