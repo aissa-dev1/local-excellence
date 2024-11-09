@@ -10,7 +10,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
-import { JwtService } from '@nestjs/jwt';
 import { Request as RequestType } from 'express';
 import { ProductV1 } from './product.schema';
 import { ProductServiceV1 } from './product.service';
@@ -25,7 +24,6 @@ export class ProductControllerV1 {
   constructor(
     private readonly productService: ProductServiceV1,
     private readonly storeService: StoreServiceV1,
-    private readonly jwtService: JwtService,
   ) {}
 
   @Get()
