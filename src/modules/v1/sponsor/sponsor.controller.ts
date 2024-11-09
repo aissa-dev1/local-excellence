@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -13,20 +14,29 @@ import { StoreServiceV1 } from '../store/store.service';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { SponsorV1 } from './sponsor.schema';
 import { Request as RequestType } from 'express';
-import { JwtService } from '@nestjs/jwt';
 import { JWTUserV1Type } from '../user/user.types';
+import { isValidCSSColor } from 'src/utils/is-valid-css-color';
 
 @Controller({ path: 'sponsors', version: '1' })
 export class SponsorControllerV1 {
   constructor(
     private readonly sponsorService: SponsorServiceV1,
     private readonly storeService: StoreServiceV1,
-    private readonly jwtService: JwtService,
   ) {}
 
   @Get()
   getSponsors(): Promise<SponsorV1[]> {
     return this.sponsorService.findMany();
+  }
+
+  @Get('storeId/:storeId')
+  async getSponsorByStoreId(@Request() req: RequestType): Promise<SponsorV1> {
+    const sponsor = await this.sponsorService.findOne({
+      filter: {
+        storeId: req.params.storeId,
+      },
+    });
+    return sponsor;
   }
 
   @Post()
@@ -47,17 +57,23 @@ export class SponsorControllerV1 {
     });
 
     if (!store) {
-      throw new UnauthorizedException(
+      throw new BadRequestException(
         'No store found, you cannot create a sponsor without a store',
       );
-    }
-    if (sponsor) {
-      throw new UnauthorizedException('Sponsor from this store already exists');
     }
     if (store.userId !== (req.user as JWTUserV1Type).sub) {
       throw new UnauthorizedException(
         'You are not authorized to create a sponsor from this store',
       );
+    }
+    if (sponsor) {
+      throw new BadRequestException('Sponsor from this store already exists');
+    }
+    if (!isValidCSSColor(dto.backgroundColor)) {
+      throw new BadRequestException('Invalid background color');
+    }
+    if (!isValidCSSColor(dto.color)) {
+      throw new BadRequestException('Invalid color');
     }
 
     await this.sponsorService.createSponsor(dto, store._id.toString());
