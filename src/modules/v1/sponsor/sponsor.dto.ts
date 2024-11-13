@@ -4,7 +4,7 @@ export class CreateSponsorV1Dto {
   @IsMongoId({ message: 'Provide a valid store id' })
   storeId: string;
 
-  @Length(2, 25, { message: 'background-color must be 2-25 characters long' })
+  @Length(2, 25, { message: 'Background color must be 2-25 characters long' })
   backgroundColor: string;
 
   @Length(2, 25, { message: 'Color must be 2-25 characters long' })
