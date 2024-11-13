@@ -75,6 +75,11 @@ export class SponsorControllerV1 {
     if (!isValidCSSColor(dto.color)) {
       throw new BadRequestException('Invalid color');
     }
+    if (dto.backgroundColor === dto.color) {
+      throw new BadRequestException(
+        'Background color and color cannot be the same',
+      );
+    }
 
     await this.sponsorService.createSponsor(dto, store._id.toString());
     return `Sponsor from ${store.name} created successfully`;
