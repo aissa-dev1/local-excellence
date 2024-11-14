@@ -4,13 +4,14 @@ import {
   Controller,
   Get,
   NotFoundException,
+  Param,
   Post,
   Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { StoreServiceV1 } from './store.service';
-import { CreateStoreV1Dto } from './store.dto';
+import { CreateStoreV1Dto, ICreateStoreV1Dto } from './store.dto';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { JWTUserV1Type } from '../user/user.types';
 import { Request as RequestType } from 'express';
@@ -18,10 +19,18 @@ import { decodeStoreName } from 'src/utils/store-name';
 import { StoreV1 } from './store.schema';
 import { STORE_V1_TYPE } from './store.constants';
 import { hasSpecialCharacters } from 'src/utils/has-special-characters';
+import { TranslationManager } from 'src/utils/translation-manager';
+import { storeV1Translation } from './store.translation';
+import { TranslationLanguage } from 'src/types/translation';
+import { validateDto } from 'src/utils/validate-dto';
 
 @Controller({ path: 'stores', version: '1' })
 export class StoreControllerV1 {
   private readonly homeStoresSize = 6;
+  private readonly translation = new TranslationManager({
+    translation: storeV1Translation,
+    language: 'en',
+  });
 
   constructor(private readonly storeService: StoreServiceV1) {}
 
@@ -67,7 +76,12 @@ export class StoreControllerV1 {
   }
 
   @Get('/name/:name')
-  async getStoreByName(@Request() req: RequestType): Promise<StoreV1> {
+  async getStoreByName(
+    @Request() req: RequestType,
+    @Param('language') language: TranslationLanguage = 'en',
+  ): Promise<StoreV1> {
+    this.translation.setLanguage(language);
+
     const store = await this.storeService.findOne({
       filter: {
         name: decodeStoreName(req.params.name),
@@ -75,14 +89,19 @@ export class StoreControllerV1 {
     });
 
     if (!store) {
-      throw new NotFoundException('Store not found');
+      throw new NotFoundException(this.translation.errors['store-not-found']);
     }
 
     return store;
   }
 
   @Get('/id/:id')
-  async getStoreById(@Request() req: RequestType): Promise<StoreV1> {
+  async getStoreById(
+    @Request() req: RequestType,
+    @Param('language') language: TranslationLanguage = 'en',
+  ): Promise<StoreV1> {
+    this.translation.setLanguage(language);
+
     const store = await this.storeService.findOne({
       filter: {
         _id: req.params.id,
@@ -90,7 +109,7 @@ export class StoreControllerV1 {
     });
 
     if (!store) {
-      throw new NotFoundException('Store not found');
+      throw new NotFoundException(this.translation.errors['store-not-found']);
     }
 
     return store;
@@ -99,9 +118,15 @@ export class StoreControllerV1 {
   @Post()
   @UseGuards(JwtAuthGuard)
   async createStore(
-    @Body() dto: CreateStoreV1Dto,
+    @Body() body: ICreateStoreV1Dto,
     @Request() req: RequestType,
   ): Promise<string> {
+    const dto = new CreateStoreV1Dto(body);
+
+    await validateDto(dto);
+
+    this.translation.setLanguage(dto.language);
+
     const store = await this.storeService.findOne({
       filter: {
         name: dto.name,
@@ -109,11 +134,13 @@ export class StoreControllerV1 {
     });
 
     if (store) {
-      throw new BadRequestException('Store with this name already exists');
+      throw new BadRequestException(
+        this.translation.errors['store-name-already-exists'],
+      );
     }
     if (hasSpecialCharacters(dto.name)) {
       throw new BadRequestException(
-        'Store name cannot contain special characters',
+        this.translation.errors['store-name-special-characters'],
       );
     }
 
@@ -121,7 +148,7 @@ export class StoreControllerV1 {
       dto,
       (req.user as JWTUserV1Type).sub,
     );
-    return `Store ${createdStore.name} created successfully`;
+    return `${this.translation.messages['store']} ${createdStore.name} ${this.translation.messages['created-successfully']}`;
   }
 
   @Post('/search')
@@ -167,6 +194,7 @@ export class StoreControllerV1 {
           name: `${randomCharacter()} Store ${i + 1}`,
           description: `This is a store description ${i + 1}`,
           type: randomType(),
+          language: 'en',
         },
         (req.user as JWTUserV1Type).sub,
       );
