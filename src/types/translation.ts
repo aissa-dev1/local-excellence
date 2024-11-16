@@ -1,7 +1,7 @@
-import { LANGUAGE_V1 } from 'src/constants';
+import { SUPPORTED_LANGUAGES } from 'src/constants';
 
 export type TranslationLanguage =
-  (typeof LANGUAGE_V1)[keyof typeof LANGUAGE_V1];
+  (typeof SUPPORTED_LANGUAGES)[keyof typeof SUPPORTED_LANGUAGES];
 
 export type TranslationType<T extends Record<string, any>> = {
   [K in TranslationLanguage]: T;

@@ -9,6 +9,7 @@ import { AuthModule } from './modules/shared/auth/auth.module';
 import { StoreModule } from './modules/shared/store/store.module';
 import { SponsorModule } from './modules/shared/sponsor/sponsor.module';
 import { ProductModule } from './modules/shared/product/product.module';
+import { TranslationModule } from './modules/common/translations/translation.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ProductModule } from './modules/shared/product/product.module';
     StoreModule,
     ProductModule,
     SponsorModule,
+    TranslationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,4 +1,4 @@
-export const LANGUAGE_V1 = {
+export const SUPPORTED_LANGUAGES = {
   EN: 'en',
   AR: 'ar',
 } as const;
